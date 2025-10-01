@@ -15,6 +15,7 @@ import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.channel.TextChannel;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,12 +23,13 @@ public class PlayerTracker {
     private DiscordApi discordApi;
     private TextChannel statusChannel;
 
-    private final String BOT_TOKEN = "MTQyMjc1MzE4MDM5NTExMDY0NA.GRrU_0.mYExed8l4jvcT4mLVD6ycGXktEoWIUZCO442hY";
+    private final String BOT_TOKEN = "";
     private final String CHANNEL_ID = "1115846300026548326";
 
-    private Map<String, Long> playerPlayTime = new ConcurrentHashMap<>();
-    private Map<String, Long> loginTimes = new ConcurrentHashMap<>();
+    private final Map<String, Long> loginTimes = new ConcurrentHashMap<>();
+    private Map<String, Long> logoutTimes = new ConcurrentHashMap<>();
     private File statsFile;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm");
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
@@ -38,13 +40,18 @@ public class PlayerTracker {
     @Mod.EventHandler
     public void serverStart(FMLServerStartingEvent event) {
         startDiscordBot();
+        sendOnlineStatus();
     }
 
     @Mod.EventHandler
     public void serverStop(FMLServerStoppingEvent event) {
-        for (String playerName : loginTimes.keySet()) {
-            updatePlayTime(playerName);
+        List<String> onlinePlayers = getOnlinePlayers();
+        for (String playerName : onlinePlayers) {
+            handlePlayerLogout(playerName);
         }
+
+        sendOnlineStatus(true);
+
         saveStats();
         stopDiscordBot();
     }
@@ -60,7 +67,6 @@ public class PlayerTracker {
             statusChannel = discordApi.getTextChannelById(CHANNEL_ID).orElse(null);
             if (statusChannel != null) {
                 System.out.println("Discord бот подключен к каналу: " + statusChannel.getId());
-                sendOnlineStatus();
             }
 
         } catch (Exception e) {
@@ -77,11 +83,9 @@ public class PlayerTracker {
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         String playerName = event.player.getCommandSenderName();
-        loginTimes.put(playerName, System.currentTimeMillis());
-
-        if (!playerPlayTime.containsKey(playerName)) {
-            playerPlayTime.put(playerName, 0L);
-        }
+        long loginTime = System.currentTimeMillis();
+        loginTimes.put(playerName, loginTime);
+        logoutTimes.remove(playerName);
 
         sendOnlineStatus();
         saveStats();
@@ -90,37 +94,38 @@ public class PlayerTracker {
     @SubscribeEvent
     public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         String playerName = event.player.getCommandSenderName();
-        updatePlayTime(playerName);
+        handlePlayerLogout(playerName);
 
         sendOnlineStatus();
         saveStats();
     }
 
-    private void updatePlayTime(String playerName) {
+    private void handlePlayerLogout(String playerName) {
         if (loginTimes.containsKey(playerName)) {
-            long sessionTime = System.currentTimeMillis() - loginTimes.get(playerName);
-            long totalTime = playerPlayTime.getOrDefault(playerName, 0L) + sessionTime;
-            playerPlayTime.put(playerName, totalTime);
+            long logoutTime = System.currentTimeMillis();
+            logoutTimes.put(playerName, logoutTime);
             loginTimes.remove(playerName);
         }
     }
 
-    private void sendOnlineStatus() {
+    private void sendOnlineStatus(boolean isServerStopping) {
         List<String> onlinePlayers = getOnlinePlayers();
         List<String> offlinePlayers = getOfflinePlayers();
 
         StringBuilder message = new StringBuilder();
 
-        if (onlinePlayers.isEmpty()) {
-            message.append("🔴 **Сервер пуст**\n\n");
+        if (isServerStopping) {
+            message.append("🔴 **Сервер выключается**\n\n");
         } else {
+            message.append("🟢 **Сервер включен**\n\n");
+        }
+
+        if (!onlinePlayers.isEmpty()) {
             message.append("🟢 **Онлайн (").append(onlinePlayers.size()).append("):**\n");
             for (String playerName : onlinePlayers) {
-                long totalTime = playerPlayTime.getOrDefault(playerName, 0L);
-                long sessionTime = System.currentTimeMillis() - loginTimes.get(playerName);
+                long loginTime = loginTimes.get(playerName);
                 message.append("• ").append(playerName)
-                    .append(" - ").append(formatTime(totalTime))
-                    .append(" (").append(formatTime(sessionTime)).append(" сессия)\n");
+                    .append(" - зашёл в ").append(formatDateTime(loginTime)).append("\n");
             }
             message.append("\n");
         }
@@ -128,12 +133,22 @@ public class PlayerTracker {
         if (!offlinePlayers.isEmpty()) {
             message.append("⚫ **Оффлайн:**\n");
             for (String playerName : offlinePlayers) {
-                long totalTime = playerPlayTime.getOrDefault(playerName, 0L);
-                message.append("• ").append(playerName).append(" - ").append(formatTime(totalTime)).append("\n");
+                Long logoutTime = logoutTimes.get(playerName);
+                if (logoutTime != null) {
+                    message.append("• ").append(playerName)
+                        .append(" - вышел в ").append(formatDateTime(logoutTime)).append("\n");
+                } else {
+                    message.append("• ").append(playerName)
+                        .append(" - никогда не заходил\n");
+                }
             }
         }
 
         sendToDiscord(message.toString());
+    }
+
+    private void sendOnlineStatus() {
+        sendOnlineStatus(false);
     }
 
     private List<String> getOnlinePlayers() {
@@ -143,7 +158,11 @@ public class PlayerTracker {
                 .getConfigurationManager().playerEntityList;
 
             for (EntityPlayerMP player : playerList) {
-                players.add(player.getCommandSenderName());
+                String playerName = player.getCommandSenderName();
+                players.add(playerName);
+                if (!loginTimes.containsKey(playerName)) {
+                    loginTimes.put(playerName, System.currentTimeMillis());
+                }
             }
 
             Collections.sort(players);
@@ -155,15 +174,9 @@ public class PlayerTracker {
     }
 
     private List<String> getOfflinePlayers() {
-        List<String> offlinePlayers = new ArrayList<>();
 
-        for (String playerName : playerPlayTime.keySet()) {
-            if (!loginTimes.containsKey(playerName)) {
-                offlinePlayers.add(playerName);
-            }
-        }
+        List<String> offlinePlayers = new ArrayList<>(logoutTimes.keySet());
 
-        // Сортируем по алфавиту
         Collections.sort(offlinePlayers);
 
         return offlinePlayers;
@@ -179,21 +192,10 @@ public class PlayerTracker {
         }
     }
 
-    private String formatTime(long millis) {
-        long seconds = millis / 1000;
-        long hours = seconds / 3600;
-        long minutes = (seconds % 3600) / 60;
-
-        if (hours > 0) {
-            return String.format("%dч %dм", hours, minutes);
-        } else if (minutes > 0) {
-            return String.format("%dм", minutes);
-        } else {
-            return String.format("%dс", seconds);
-        }
+    private String formatDateTime(long timestamp) {
+        return dateFormat.format(new Date(timestamp));
     }
 
-    // Сохранение и загрузка статистики
     private void saveStats() {
         try {
             if (statsFile == null) {
@@ -201,7 +203,7 @@ public class PlayerTracker {
             }
 
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(statsFile));
-            oos.writeObject(new HashMap<>(playerPlayTime));
+            oos.writeObject(new HashMap<>(logoutTimes));
             oos.close();
 
         } catch (IOException e) {
@@ -215,13 +217,13 @@ public class PlayerTracker {
             statsFile = new File("world/infomod.dat");
             if (statsFile.exists()) {
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(statsFile));
-                playerPlayTime = new ConcurrentHashMap<>((Map<String, Long>) ois.readObject());
+                logoutTimes = new ConcurrentHashMap<>((Map<String, Long>) ois.readObject());
                 ois.close();
-                System.out.println("Загружена статистика для " + playerPlayTime.size() + " игроков");
+                System.out.println("Загружена статистика для " + logoutTimes.size() + " игроков");
             }
         } catch (Exception e) {
             System.err.println("Ошибка загрузки статистики: " + e.getMessage());
-            playerPlayTime = new ConcurrentHashMap<>();
+            logoutTimes = new ConcurrentHashMap<>();
         }
     }
 }
