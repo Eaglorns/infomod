@@ -5,6 +5,7 @@
       <element id="module-output" name="infomod.main" />
       <element id="module-output" name="infomod.injectedTags" />
       <element id="library" level="project" name="Gradle: org.javacord:javacord-api:3.8.0" />
+      <element id="library" level="project" name="Gradle: org.javacord:javacord-core:3.8.0" />
     </root>
   </artifact>
 </component>

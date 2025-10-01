@@ -35,5 +35,6 @@
  */
 dependencies {
     implementation 'org.javacord:javacord-api:3.8.0'
+    compile 'org.javacord:javacord:3.8.0'
     //runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.7.69-GTNH:dev")
 }
