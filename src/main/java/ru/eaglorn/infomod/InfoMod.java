@@ -1,16 +1,14 @@
 package ru.eaglorn.infomod;
 
-import net.minecraft.network.rcon.IServer;
-import net.minecraftforge.common.MinecraftForge;
+import cpw.mods.fml.common.event.*;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.PlayerEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cpw.mods.fml.common.Mod;
-import cpw.mods.fml.common.SidedProxy;
-import cpw.mods.fml.common.event.FMLInitializationEvent;
-import cpw.mods.fml.common.event.FMLPostInitializationEvent;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import cpw.mods.fml.common.event.FMLServerStartingEvent;
+
+import java.util.List;
 
 @Mod(modid = InfoMod.MODID, version = Tags.VERSION, name = "InfoMod", acceptedMinecraftVersions = "[1.7.10]", acceptableRemoteVersions = "*")
 public class InfoMod {
@@ -18,32 +16,54 @@ public class InfoMod {
     public static final String MODID = "infomod";
     public static final Logger LOG = LogManager.getLogger(MODID);
 
-    @SidedProxy(serverSide = "ru.eaglorn.infomod.CommonProxy")
-    public static CommonProxy proxy;
+    private PlayerTracker playerTracker;
 
     @Mod.EventHandler
-    // preInit "Run before anything else. Read your config, create blocks, items, etc., and register them with the
-    // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
-        proxy.preInit(event);
+        Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
+
+        InfoMod.LOG.info(Config.greeting);
+        InfoMod.LOG.info("I am InfoMod at version " + Tags.VERSION);
     }
 
     @Mod.EventHandler
-    // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
-        proxy.init(event);
-        MinecraftForge.EVENT_BUS.register(new PlayerTracker());
+        playerTracker = new PlayerTracker();
+        playerTracker.loadStats();
     }
 
     @Mod.EventHandler
-    // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
-    public void postInit(FMLPostInitializationEvent event) {
-        proxy.postInit(event);
-    }
-
-    @Mod.EventHandler
-    // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {
-        proxy.serverStarting(event);
+        playerTracker.startDiscordBot();
+        playerTracker.sendOnlineStatus();
+    }
+
+    @Mod.EventHandler
+    public void serverStop(FMLServerStoppingEvent event) {
+        List<String> onlinePlayers = playerTracker.getOnlinePlayers();
+        for (String playerName : onlinePlayers) {
+            playerTracker.handlePlayerLogout(playerName);
+        }
+        playerTracker.sendOnlineStatus(true);
+        playerTracker.saveStats();
+        playerTracker.stopDiscordBot();
+    }
+
+    @SubscribeEvent
+    public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        String playerName = event.player.getCommandSenderName();
+        long loginTime = System.currentTimeMillis();
+        playerTracker.loginTimes.put(playerName, loginTime);
+        playerTracker.logoutTimes.remove(playerName);
+        playerTracker.sendOnlineStatus();
+        playerTracker.saveStats();
+    }
+
+    @SubscribeEvent
+    public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        String playerName = event.player.getCommandSenderName();
+        playerTracker.handlePlayerLogout(playerName);
+        playerTracker.sendOnlineStatus();
+        playerTracker.saveStats();
     }
 }
