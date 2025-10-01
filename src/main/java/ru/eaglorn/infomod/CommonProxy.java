@@ -1,4 +1,4 @@
-package com.eaglorn.infomod;
+package ru.eaglorn.infomod;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;

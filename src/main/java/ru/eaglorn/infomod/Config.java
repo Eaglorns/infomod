@@ -1,4 +1,4 @@
-package com.eaglorn.infomod;
+package ru.eaglorn.infomod;
 
 import java.io.File;
 
