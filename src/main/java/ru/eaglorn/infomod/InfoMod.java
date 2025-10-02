@@ -15,7 +15,7 @@ public class InfoMod {
     public static final String MODID = "infomod";
     public static final Logger LOG = LogManager.getLogger(MODID);
 
-    @SidedProxy(serverSide = "com.eaglorn.infomod.CommonProxy")
+    @SidedProxy(serverSide = "ru.eaglorn.infomod.CommonProxy")
     public static CommonProxy proxy;
 
     @Mod.EventHandler
