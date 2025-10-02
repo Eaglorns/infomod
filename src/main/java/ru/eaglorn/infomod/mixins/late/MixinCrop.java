@@ -1,4 +1,4 @@
-package ru.eaglorn.infomod.mixins.early;
+package ru.eaglorn.infomod.mixins.late;
 
 import ic2.core.crop.TileEntityCrop;
 

@@ -60,7 +60,7 @@ public class EarlyMixinsLoader implements IFMLLoadingPlugin, IEarlyMixinLoader {
 
         if (FMLLaunchHandler.side().isClient()) {
             // register here your mixins that should only be loaded on the client
-            mixins.add("MixinCrop");// this is an example you should delete it and the associated mixin class as well
+            // mixins.add("MixinCrop");// this is an example you should delete it and the associated mixin class as well
         } else {
             // register here your mixins that should only be loaded on the dedicated server
             // mixins.add("MixinClass");

@@ -29,6 +29,8 @@ public class LateMixinsLoader implements ILateMixinLoader {
         // The late mixins are mixins that target classes from other mods
         // The late mixins should be placed in the "mixins/late" package
         List<String> mixins = new ArrayList<>();
+
+        mixins.add("MixinCrop");
         // The loadedMods contains the mod ID of the mods that are currently loaded
         // you can check this Set to decide to load certain mixins or not.
         return mixins;

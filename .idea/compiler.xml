@@ -4,9 +4,9 @@
     <annotationProcessing>
       <profile name="Gradle Imported" enabled="true">
         <outputRelativeToContentRoot value="true" />
-        <option name="outRefMapFile" value="C:\Users\averin\Documents\GitHub\infomod\build\tmp\mixins\mixins.infomod.refmap.json" />
-        <option name="outSrgFile" value="C:\Users\averin\Documents\GitHub\infomod\build\tmp\mixins\mixins.srg" />
-        <option name="reobfSrgFile" value="C:\Users\averin\.gradle\caches\minecraft\net\minecraftforge\forge\1.7.10-10.13.4.1614-1.7.10\unpacked\srgs\mcp-srg.srg" />
+        <option name="outRefMapFile" value="C:\Users\eaglorn\Documents\GitHub\infomod\build\tmp\mixins\mixins.infomod.refmap.json" />
+        <option name="outSrgFile" value="C:\Users\eaglorn\Documents\GitHub\infomod\build\tmp\mixins\mixins.srg" />
+        <option name="reobfSrgFile" value="C:\Users\eaglorn\.gradle\caches\minecraft\net\minecraftforge\forge\1.7.10-10.13.4.1614-1.7.10\unpacked\srgs\mcp-srg.srg" />
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.bsideup.jabel/jabel-javac-plugin/1.0.1/bb8438165ad73915c66d63ee316895817e645455/jabel-javac-plugin-1.0.1.jar" />
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna-platform/5.13.0/88e9a306715e9379f3122415ef4ae759a352640d/jna-platform-5.13.0.jar" />
